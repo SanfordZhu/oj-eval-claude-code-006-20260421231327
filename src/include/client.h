@@ -290,7 +290,7 @@ static bool EnumDeduce(int &best_guess_r, int &best_guess_c, double &best_guess_
     comp_cons[cell_comp[cons[ci].idx[0]]].push_back(ci);
   }
 
-  const int kMaxComp = 24;
+  const int kMaxComp = 28;
 
   std::vector<EnumResult> results(num_comps);
 
@@ -525,6 +525,42 @@ static bool EnumDeduce(int &best_guess_r, int &best_guess_c, double &best_guess_
         visible[fp.first][fp.second] = -1;
         mine_queue.emplace_back(fp.first, fp.second);
         changed = true;
+      }
+    }
+  }
+
+  // Check interior certainty too
+  if (NF > 0) {
+    // E[interior_mines] / NF should be 0 or 1 if certain
+    long double exp_interior = 0.0L;
+    for (int K = 0; K <= remaining_mines; ++K) {
+      if (combined[K] == 0.0L) continue;
+      int I = remaining_mines - K;
+      if (I < 0 || I > NF) continue;
+      exp_interior += combined[K] * binom[I] * (long double)I;
+    }
+    double iprob = (double)(exp_interior / grand_total / (long double)NF);
+    if (iprob <= 1e-12) {
+      // All interior safe
+      for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < columns; ++j) {
+          if (visible[i][j] == -2 && frontier_cell_idx[i][j] == -1) {
+            visible[i][j] = -3;
+            safe_queue.emplace_back(i, j);
+            changed = true;
+          }
+        }
+      }
+    } else if (iprob >= 1.0 - 1e-12) {
+      // All interior are mines
+      for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < columns; ++j) {
+          if (visible[i][j] == -2 && frontier_cell_idx[i][j] == -1) {
+            visible[i][j] = -1;
+            mine_queue.emplace_back(i, j);
+            changed = true;
+          }
+        }
       }
     }
   }

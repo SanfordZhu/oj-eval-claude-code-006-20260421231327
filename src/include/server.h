@@ -123,7 +123,8 @@ void MarkMine(int r, int c) {
   if (!InBounds(r, c)) return;
   if (visited[r][c] || marked[r][c]) return;
   if (!is_mine[r][c]) {
-    // Wrong mark -> lose
+    // Wrong mark -> lose. Still show the mark.
+    marked[r][c] = true;
     lose_by_mark_wrong = true;
     wrong_mark_r = r;
     wrong_mark_c = c;

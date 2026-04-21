@@ -567,16 +567,31 @@ static bool EnumDeduce(int &best_guess_r, int &best_guess_c, double &best_guess_
 
   if (changed) return true;
 
-  // Compute best guess probability
+  // Compute best guess probability. Tie-break: prefer cells with more revealed-number neighbors
+  // (more info on reveal) when probabilities are approximately equal.
+  int best_info = -1;
   for (int fi = 0; fi < F; ++fi) {
     auto &p = frontier[fi];
     if (visible[p.first][p.second] != -2) continue;
     double pr = mine_prob[fi];
-    if (pr < 0) continue;  // skipped comp
-    if (pr < best_guess_prob) {
+    if (pr < 0) continue;
+    // Info = number of revealed-number neighbors (proxy for info gain).
+    int info = 0;
+    for (int dr = -1; dr <= 1; ++dr)
+      for (int dc = -1; dc <= 1; ++dc) {
+        if (dr == 0 && dc == 0) continue;
+        int nr = p.first + dr, nc = p.second + dc;
+        if (CInBounds(nr, nc) && visible[nr][nc] >= 0) ++info;
+      }
+    if (pr < best_guess_prob - 1e-9) {
       best_guess_prob = pr;
       best_guess_r = p.first;
       best_guess_c = p.second;
+      best_info = info;
+    } else if (std::abs(pr - best_guess_prob) <= 1e-9 && info > best_info) {
+      best_guess_r = p.first;
+      best_guess_c = p.second;
+      best_info = info;
     }
   }
 
